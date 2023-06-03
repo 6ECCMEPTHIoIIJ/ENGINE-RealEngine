@@ -1,5 +1,5 @@
-#if !defined REAL_ENGINE_INCLUDE_VECTOR2_H_
-#define REAL_ENGINE_INCLUDE_VECTOR2_H_
+#if !defined REAL_ENGINE_VECTOR2_H_
+#define REAL_ENGINE_VECTOR2_H_
 
 #include <concepts>
 #include <format>
@@ -8,6 +8,11 @@
 
 namespace re::utility {
 
+/// Class of arithmetical two dimension vector.
+/// Provides basic arithmetical operations such as
+/// adding and subtracting pair of vectors,
+/// multiplying and dividing vector on number
+/// \tparam T - integral or floating point number
 template<typename T> requires std::is_arithmetic_v<T>
 class Vector2 : public Object {
 // Friend definitions -------
@@ -49,6 +54,10 @@ class Vector2 : public Object {
 
   Vector2(T x, T y) : x_(x), y_(y) {}
 
+// Destructor ---------------
+
+ ~Vector2() override = default;
+
 // Getters ------------------
 
   [[nodiscard]]
@@ -59,6 +68,11 @@ class Vector2 : public Object {
   [[nodiscard]]
   auto GetY() const -> T {
     return y_;
+  }
+
+  [[nodiscard]]
+  auto GetTypeInfo() const -> const std::type_info & override {
+    return typeid(Vector2);
   }
 
 // Setters ------------------
@@ -76,11 +90,6 @@ class Vector2 : public Object {
   [[nodiscard]]
   auto ToString() const -> std::string override {
     return std::format("({};{})", x_, y_);
-  }
-
-  [[nodiscard]]
-  auto GetTypeInfo() const -> const std::type_info & override {
-    return typeid(Vector2);
   }
 
   [[nodiscard]]
@@ -182,4 +191,4 @@ template<typename T> requires std::is_arithmetic_v<T>
 const Vector2<T> Vector2<T>::kRight{1, 0};
 } // re::utility
 
-#endif // REAL_ENGINE_INCLUDE_VECTOR2_H_
+#endif // REAL_ENGINE_VECTOR2_H_
