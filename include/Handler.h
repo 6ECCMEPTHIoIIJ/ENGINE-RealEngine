@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <format>
+#include <mutex>
 
 #include "Object.h"
 
@@ -27,8 +28,9 @@ class Handler : public Object {
  protected:
 
  private:
-
   std::function<void(Args...)> function_;
+
+  mutable std::mutex mutex_;
 
 // Methods ==================
  public:
@@ -56,7 +58,7 @@ class Handler : public Object {
 // Other --------------------
 
   template<typename C, typename Functor, typename ...BindArgs>
-  auto Bind(C *owner, const Functor &functor, BindArgs... bind_args) -> void {
+  auto Bind(const Functor &functor, C *owner,  BindArgs... bind_args) -> void {
     function_ = [=](Args... args) -> void {
       (owner->*functor)(args..., bind_args...);
     };
@@ -70,6 +72,7 @@ class Handler : public Object {
   }
 
   auto Invoke(Args... args) -> void {
+    std::lock_guard lock_guard(mutex_);
     function_(args...);
   }
 
@@ -83,6 +86,10 @@ class Handler : public Object {
   }
 
 // Operators ----------------
+
+  auto operator=(const Handler &other) -> Handler & = delete;
+
+  auto operator=(Handler &&other) noexcept -> Handler & = delete;
 
   auto operator()(Args... args) -> void {
     Invoke(args...);

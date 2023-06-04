@@ -1,7 +1,7 @@
-project(Test)
+project(Tests)
 
 set(TEST_SOURCE Test.cpp)
-add_executable(Test ${TEST_SOURCE})
+add_executable(Tests ${TEST_SOURCE})
 
-target_link_libraries(Test PRIVATE RealEngine)
-target_include_directories(Test PUBLIC ${CMAKE_SOURCE_DIR}/include)
+target_link_libraries(Tests PRIVATE RealEngine)
+target_include_directories(Tests PUBLIC ${CMAKE_SOURCE_DIR}/include)

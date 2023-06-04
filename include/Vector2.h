@@ -5,6 +5,7 @@
 #include <format>
 
 #include "Object.h"
+#include "Event.h"
 
 namespace re::utility {
 
@@ -26,6 +27,7 @@ class Vector2 : public Object {
 
 // Fields -------------------
  public:
+  Event<const Vector2&> OnChanged;
 
 // Static members -----------
 
@@ -78,11 +80,17 @@ class Vector2 : public Object {
 // Setters ------------------
 
   auto SetX(const T x) -> void {
-    x_ = x;
+    if (x_ != x) {
+      x_ = x;
+      OnChanged(*this);
+    }
   }
 
   auto SetY(const T y) -> void {
-    y_ = y;
+    if (y_ != y) {
+      y_ = y;
+      OnChanged(*this);
+    }
   }
 
 // Other --------------------
@@ -101,9 +109,32 @@ class Vector2 : public Object {
 
 // Operators ----------------
 
-  auto operator=(const Vector2 &other) -> Vector2 & = default;
+  auto operator=(const Vector2 &other) -> Vector2 & {
+    if (this == &other) {
+      return *this;
+    }
 
-  auto operator=(Vector2 &&other) noexcept -> Vector2 & = default;
+    bool changed = false;
+    if (x_ != other.x_) {
+      x_ = other.x_;
+      changed = true;
+    }
+
+    if (y_ != other.y_) {
+      y_ = other.y_;
+      changed = true;
+    }
+
+    if (changed) {
+      OnChanged(*this);
+    }
+
+    return *this;
+  }
+
+  auto operator=(Vector2 &&other) noexcept -> Vector2 & {
+    //TODO: implement;
+  }
 
   auto operator+=(const Vector2 &other) -> Vector2 & {
     x_ += other.x_;
