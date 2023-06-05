@@ -27,7 +27,7 @@ class Vector2 : public Object {
 
 // Fields -------------------
  public:
-  Event<const Vector2&> OnChanged;
+  Event<const Vector2 &> OnChanged;
 
 // Static members -----------
 
@@ -58,7 +58,7 @@ class Vector2 : public Object {
 
 // Destructor ---------------
 
- ~Vector2() override = default;
+  ~Vector2() override = default;
 
 // Getters ------------------
 
@@ -133,35 +133,42 @@ class Vector2 : public Object {
   }
 
   auto operator=(Vector2 &&other) noexcept -> Vector2 & {
-    //TODO: implement;
+    if (this == &other) {
+      return *this;
+    }
+
+    bool changed = false;
+    if (x_ != other.x_) {
+      x_ = std::move(other.x_);
+      changed = true;
+    }
+
+    if (y_ != other.y_) {
+      y_ = std::move(other.y_);
+      changed = true;
+    }
+
+    if (changed) {
+      OnChanged(*this);
+    }
+
+    return *this;
   }
 
   auto operator+=(const Vector2 &other) -> Vector2 & {
-    x_ += other.x_;
-    y_ += other.y_;
-
-    return *this;
+    return *this = *this + other;
   }
 
   auto operator-=(const Vector2 &other) -> Vector2 & {
-    x_ -= other.x_;
-    y_ -= other.y_;
-
-    return *this;
+    return *this = *this - other;
   }
 
   auto operator*=(const T other) -> Vector2 & {
-    x_ *= other;
-    y_ *= other;
-
-    return *this;
+    return *this = *this * other;
   }
 
   auto operator/=(const T other) -> Vector2 & {
-    x_ /= other;
-    y_ /= other;
-
-    return *this;
+    return *this = *this / other;
   }
 
   auto operator-() -> Vector2 {
@@ -173,28 +180,32 @@ class Vector2 : public Object {
   }
 
   auto operator+(const Vector2 &other) -> Vector2 {
-    return Vector2(*this) += other;
+    return Vector2(x_ + other.x_,
+                   y_ + other.y_);
   }
 
   auto operator-(const Vector2 &other) -> Vector2 {
-    return Vector2(*this) -= other;
+    return Vector2(x_ - other.x_,
+                   y_ - other.y_);
   }
 
   auto operator*(const T other) -> Vector2 {
-    return Vector2(*this) *= other;
+    return Vector2(x_ * other,
+                   y_ * other);
   }
 
   auto operator/(const T other) -> Vector2 {
-    return Vector2(*this) /= other;
+    return Vector2(x_ / other,
+                   y_ / other);
   }
 
   [[nodiscard]]
-  auto operator==(const Vector2& other) const -> bool {
+  auto operator==(const Vector2 &other) const -> bool {
     return IsEqual(&other);
   }
 
   [[nodiscard]]
-  auto operator!=(const Vector2& other) const -> bool {
+  auto operator!=(const Vector2 &other) const -> bool {
     return !IsEqual(&other);
   }
 // Static members -----------

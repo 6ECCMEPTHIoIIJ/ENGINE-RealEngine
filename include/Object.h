@@ -3,6 +3,7 @@
 
 #include <string>
 #include <typeinfo>
+#include <sstream>
 
 namespace re {
 
@@ -45,7 +46,9 @@ class Object {
 /// Returns information about object type
   /// \return information about type (equals to invoke typeid(type))
   [[nodiscard]]
-  virtual auto GetTypeInfo() const -> const std::type_info & = 0;
+  virtual auto GetTypeInfo() const -> const std::type_info & {
+    return typeid(Object);
+  }
 
   /// \brief Gets hash code of current object
   /// \return hash code of current object
@@ -61,15 +64,26 @@ class Object {
   /// Coverts object to string
   /// \return string representation of object
   [[nodiscard]]
-  virtual auto ToString() const -> std::string = 0;
+  virtual auto ToString() const -> std::string {
+    std::stringstream ss;
+    ss << dynamic_cast<const void *>(this);
+
+    return ss.str();
+  }
 
   ///
   /// \param other
   /// \return
   [[nodiscard]]
-  virtual auto IsEqual(const Object *other) const -> bool = 0;
+  virtual auto IsEqual(const Object *other) const -> bool {
+    return this == other;
+  }
 
 // Operators ----------------
+
+  auto operator=(const Object &other) -> Object & = default;
+
+  auto operator=(Object &&other) -> Object & = default;
 
 // Static members -----------
 

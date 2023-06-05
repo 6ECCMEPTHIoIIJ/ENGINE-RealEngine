@@ -5,8 +5,11 @@
 #include <atomic>
 #include <mutex>
 #include <sstream>
+#include <condition_variable>
 
 #include "Object.h"
+#include "SingleBlocker.h"
+#include "MultiBlocker.h"
 #include "Handler.h"
 
 namespace re {
@@ -40,9 +43,15 @@ class Event : public Object {
 
   std::vector<Request> requests_;
 
-  std::atomic<uint16_t> busy_ = 0;
+  MultiBlocker invoke_locker_;
 
-  mutable std::mutex mutex_;
+  MultiBlocker request_locker_;
+
+  SingleBlocker process_locker_;
+
+  std::atomic<bool> process_busy_;
+
+  std::atomic<bool> invoke_busy_;
 
 // Methods ==================
  public:
@@ -65,7 +74,7 @@ class Event : public Object {
 // Other --------------------
 
   auto AddListener(Handler<Args...> *handler) -> void {
-    if (busy_ != 0) {
+    if (invoke_locker_) {
       requests_.emplace_back(handler, &Event::AddListener);
     } else {
       handlers_.insert(handler);
@@ -73,7 +82,7 @@ class Event : public Object {
   }
 
   auto RemoveListener(Handler<Args...> *handler) -> void {
-    if (busy_ != 0) {
+    if (invoke_locker_) {
       requests_.emplace_back(handler, &Event::RemoveListener);
     } else {
       handlers_.erase(handler);
@@ -81,40 +90,21 @@ class Event : public Object {
   }
 
   auto Invoke(Args... args) -> void {
-    ++busy_;
-    for (auto &handler : handlers_) {
-      handler->Invoke(args...);
-    }
-    --busy_;
+    process_busy_.wait(true);
+    InvokeHandlers(args...);
+    UnlockProcessingRequests();
 
-    std::lock_guard lock_guard(mutex_);
-    if (requests_.empty()) {
+    if (!process_locker_.TryLock()) {
       return;
     }
 
-    for (const auto &request : requests_) {
-      (this->*request.operation)(request.handler);
-    }
-    requests_.clear();
+    invoke_busy_.wait(true);
+    ProcessRequests(args...);
+    UnlockInvokingHandlers();
   }
 
   auto GetTypeInfo() const -> const std::type_info & override {
     return typeid(Event);
-  }
-
-  auto ToString() const -> std::string override {
-    std::stringstream ss;
-    ss << "[ ";
-    for (const auto &handler : handlers_) {
-      ss << handler->ToString() << " ";
-    }
-    ss << "]";
-
-    return ss.str();
-  }
-
-  auto IsEqual(const Object *other) const -> bool override {
-    return this == other;
   }
 
 // Operators ----------------
@@ -123,14 +113,12 @@ class Event : public Object {
 
   auto operator=(Event &&other) noexcept -> Event & = delete;
 
-  auto operator+=(Handler<Args...> *handler) -> Event & {
+  auto operator+=(Handler<Args...> *handler) -> void {
     AddListener(handler);
-    return *this;
   }
 
-  auto operator-=(Handler<Args...> *handler) -> Event & {
+  auto operator-=(Handler<Args...> *handler) -> void {
     RemoveListener(handler);
-    return *this;
   }
 
   auto operator()(Args... args) -> void {
@@ -144,6 +132,39 @@ class Event : public Object {
  protected:
 
  private:
+  auto InvokeHandlers(Args... args) -> void {
+    invoke_locker_.AddLock();
+    for (auto &handler : handlers_) {
+      handler->Invoke(args...);
+    }
+
+    invoke_locker_.RemoveLock();
+  }
+
+  auto UnlockProcessingRequests() -> void {
+    if (!invoke_locker_.IsLocked()) {
+      invoke_busy_ = false;
+      invoke_busy_.notify_one();
+    }
+  }
+
+  auto ProcessRequests(Args... args) -> void {
+    if (requests_.empty()) {
+      return;
+    }
+
+    for (const auto &request : requests_) {
+      (this->*request.operation)(request.handler);
+    }
+    requests_.clear();
+  }
+
+  auto UnlockInvokingHandlers() -> void {
+    if (!process_locker_.IsLocked()) {
+      process_busy_ = false;
+      process_busy_.notify_one();
+    }
+  }
 }; // Event
 } // re
 

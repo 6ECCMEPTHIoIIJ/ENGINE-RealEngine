@@ -76,15 +76,6 @@ class Handler : public Object {
     function_(args...);
   }
 
-  [[nodiscard]]
-  auto ToString() const -> std::string override {
-    return function_.target_type().name();
-  }
-
-  auto IsEqual(const Object *other) const -> bool override {
-    return false;
-  }
-
 // Operators ----------------
 
   auto operator=(const Handler &other) -> Handler & = delete;

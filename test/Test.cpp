@@ -12,27 +12,23 @@ class B {
 
 class A {
  public:
-  re::Handler<int> h;
+    re::Handler<int> h;
 
-  re::Handler<int> h1;
-
- public:
-  A() {
-    h1.Bind(&A::Foo, this, 15);
-    h.Bind(&A::h1, this);
-  }
-
-  auto Foo(int a, int b) -> int {
-    std::cout << a << b;
-    return a;
-  }
+    A() {
+      h.Bind(&A::Foo, this, 10);
+    }
+ private:
+    int Foo(const int a, const int b) {
+      std::cout << std::format("{} {}\n", a, b);
+      return a;
+    }
 };
 
 int main() {
   B b;
   A a;
   b.OnBar.AddListener(&a.h);
-  b.OnBar += &a.h1;
+  b.OnBar += &a.h;
   b.OnBar(5);
   b.OnBar -= &a.h;
   b.OnBar(7);
