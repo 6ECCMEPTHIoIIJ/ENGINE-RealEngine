@@ -82,7 +82,7 @@ class Event : public Object {
   auto AddListener(Handler<Args...> *handler) -> void {
     if (invoke_locker_.IsLocked()) {
       std::lock_guard lock_guard(request_modify_mutex_);
-      requests_.emplace_back(handler, &Event::AddListener);
+      requests_.emplace_back(handler, &Event::InsertHandler);
     } else {
       LockModifyingRequests();
       InsertHandler(handler);
@@ -93,7 +93,7 @@ class Event : public Object {
   auto RemoveListener(Handler<Args...> *handler) -> void {
     if (invoke_locker_.IsLocked()) {
       std::lock_guard lock_guard(request_modify_mutex_);
-      requests_.emplace_back(handler, &Event::RemoveListener);
+      requests_.emplace_back(handler, &Event::EraseHandler);
     } else {
       LockModifyingRequests();
       EraseHandler(handler);
@@ -216,7 +216,6 @@ class Event : public Object {
   }
 
   auto ProcessRequest(const Request &request) -> void {
-    std::lock_guard lock_guard(handler_modify_mutex_);
     (this->*request.operation)(request.handler);
   }
 }; // Event
