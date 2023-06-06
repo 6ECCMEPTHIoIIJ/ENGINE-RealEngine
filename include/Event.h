@@ -12,7 +12,7 @@
 #include "MultiBlocker.h"
 #include "Handler.h"
 
-namespace re {
+namespace re::multithreading {
 
 template<typename ...Args>
 class Event : public Object {
@@ -53,6 +53,12 @@ class Event : public Object {
 
   std::atomic<bool> invoke_busy_;
 
+  std::atomic<bool> request_busy_;
+
+  mutable std::mutex handler_modify_mutex_;
+
+  mutable std::mutex request_modify_mutex_;
+
 // Methods ==================
  public:
 // Constructors -------------
@@ -74,23 +80,30 @@ class Event : public Object {
 // Other --------------------
 
   auto AddListener(Handler<Args...> *handler) -> void {
-    if (invoke_locker_) {
+    if (invoke_locker_.IsLocked()) {
+      std::lock_guard lock_guard(request_modify_mutex_);
       requests_.emplace_back(handler, &Event::AddListener);
     } else {
-      handlers_.insert(handler);
+      LockModifyingRequests();
+      InsertHandler(handler);
+      UnlockModifyingRequests();
     }
   }
 
   auto RemoveListener(Handler<Args...> *handler) -> void {
-    if (invoke_locker_) {
+    if (invoke_locker_.IsLocked()) {
+      std::lock_guard lock_guard(request_modify_mutex_);
       requests_.emplace_back(handler, &Event::RemoveListener);
     } else {
-      handlers_.erase(handler);
+      LockModifyingRequests();
+      EraseHandler(handler);
+      UnlockModifyingRequests();
     }
   }
 
   auto Invoke(Args... args) -> void {
     process_busy_.wait(true);
+    LockProcessingRequests();
     InvokeHandlers(args...);
     UnlockProcessingRequests();
 
@@ -98,6 +111,7 @@ class Event : public Object {
       return;
     }
 
+    LockInvokingHandlers();
     invoke_busy_.wait(true);
     ProcessRequests(args...);
     UnlockInvokingHandlers();
@@ -141,10 +155,14 @@ class Event : public Object {
     invoke_locker_.RemoveLock();
   }
 
+  auto LockProcessingRequests() -> void {
+    invoke_busy_ = true;
+  }
+
   auto UnlockProcessingRequests() -> void {
     if (!invoke_locker_.IsLocked()) {
       invoke_busy_ = false;
-      invoke_busy_.notify_one();
+      invoke_busy_.notify_all();
     }
   }
 
@@ -154,18 +172,56 @@ class Event : public Object {
     }
 
     for (const auto &request : requests_) {
-      (this->*request.operation)(request.handler);
+      request_busy_.wait(true);
+      ProcessRequest(request);
     }
     requests_.clear();
   }
 
+  auto LockInvokingHandlers() -> void {
+    process_busy_ = true;
+  }
+
   auto UnlockInvokingHandlers() -> void {
-    if (!process_locker_.IsLocked()) {
-      process_busy_ = false;
-      process_busy_.notify_one();
+    process_locker_.Unlock();
+    process_busy_ = false;
+    process_busy_.notify_all();
+  }
+
+  auto LockModifyingRequests() -> void {
+    request_busy_ = true;
+  }
+
+  auto UnlockModifyingRequests() -> void {
+    if (!request_locker_.IsLocked()) {
+      request_busy_ = false;
+      request_busy_.notify_all();
     }
   }
+
+  auto InsertHandler(Handler<Args...> *handler) -> void {
+    request_locker_.AddLock();
+    handler_modify_mutex_.lock();
+    handlers_.insert(handler);
+    handler_modify_mutex_.unlock();
+    request_locker_.RemoveLock();
+  }
+
+  auto EraseHandler(Handler<Args...> *handler) -> void {
+    request_locker_.AddLock();
+    handler_modify_mutex_.lock();
+    handlers_.erase(handler);
+    handler_modify_mutex_.unlock();
+    request_locker_.RemoveLock();
+  }
+
+  auto ProcessRequest(const Request &request) -> void {
+    std::lock_guard lock_guard(handler_modify_mutex_);
+    (this->*request.operation)(request.handler);
+  }
 }; // Event
-} // re
+} // re::multithreading
+
+
 
 #endif // REAL_ENGINE_EVENT_H_

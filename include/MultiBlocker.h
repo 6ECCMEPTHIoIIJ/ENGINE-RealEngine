@@ -8,7 +8,7 @@
 
 #include "Object.h"
 
-namespace re {
+namespace re::multithreading {
 
 class MultiBlocker : public Object {
 // Friend definitions =======
@@ -110,6 +110,6 @@ class MultiBlocker : public Object {
 
  private:
 }; // MultiBlocker
-} // re
+} // re::multithreading
 
 #endif // REAL_ENGINE_BLOCKER_H_

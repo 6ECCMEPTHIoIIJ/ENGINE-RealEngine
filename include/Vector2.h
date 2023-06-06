@@ -27,7 +27,7 @@ class Vector2 : public Object {
 
 // Fields -------------------
  public:
-  Event<const Vector2 &> OnChanged;
+  multithreading::Event<const Vector2 &> OnChanged;
 
 // Static members -----------
 

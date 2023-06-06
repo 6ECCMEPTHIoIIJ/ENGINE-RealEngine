@@ -7,7 +7,7 @@
 
 #include "Object.h"
 
-namespace re {
+namespace re::multithreading {
 
 template<typename ...Args>
 class Handler : public Object {
@@ -94,6 +94,6 @@ class Handler : public Object {
 
  private:
 }; // Handler
-} // re
+} // re::multithreading
 
 #endif // REAL_ENGINE_HANDLER_H_

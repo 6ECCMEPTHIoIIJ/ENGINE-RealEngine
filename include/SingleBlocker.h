@@ -6,7 +6,7 @@
 
 #include "Object.h"
 
-namespace re {
+namespace re::multithreading {
 
 class SingleBlocker : public Object {
 // Friend definitions =======
@@ -102,6 +102,6 @@ class SingleBlocker : public Object {
 
  private:
 }; // SingleBlocker
-} // re
+} // re::multithreading
 
 #endif // REAL_ENGINE_SINGLE_BLOCKER_H_
