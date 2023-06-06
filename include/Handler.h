@@ -58,7 +58,11 @@ class Handler : public Object {
 // Other --------------------
 
   template<typename C, typename Functor, typename ...BindArgs>
-  auto Bind(const Functor &functor, C *owner,  BindArgs... bind_args) -> void {
+  auto Bind(const Functor &functor, C *owner, BindArgs... bind_args) -> void {
+    if (reinterpret_cast<const void*>(this) == *reinterpret_cast<const void* const*>(&functor)) {
+      throw std::invalid_argument("Handler can`t be associated with itself");
+    }
+
     function_ = [=](Args... args) -> void {
       (owner->*functor)(args..., bind_args...);
     };
@@ -66,8 +70,12 @@ class Handler : public Object {
 
   template<typename Functor, typename ...BindArgs>
   auto Bind(const Functor &functor, BindArgs... bind_args) -> void {
+    if (reinterpret_cast<const void*>(this) == *reinterpret_cast<const void* const*>(&functor)) {
+      throw std::invalid_argument("Handler can`t be associated with itself");
+    }
+
     function_ = [=](Args... args) -> void {
-      functor(args..., bind_args...);
+      (*functor)(args..., bind_args...);
     };
   }
 

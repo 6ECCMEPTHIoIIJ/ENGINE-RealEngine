@@ -13,9 +13,11 @@ class B {
 class A {
  public:
   re::multithreading::Handler<int> h;
+  re::multithreading::Handler<int> h1;
 
   A(int a) {
     h.Bind(&A::Foo, this, a);
+    h1.Bind(&A::h, this);
   }
 
  private:
@@ -32,7 +34,7 @@ int main() {
   A a2(42);
   A a3(0);
   A a4(123213);
-  b.OnBar.AddListener(&a.h);
+  b.OnBar.AddListener(&a.h1);
   std::thread([&] { while (true) { b.OnBar(5); }}).detach();
   b.OnBar.AddListener(&a1.h);
   std::thread([&] { while (true) { b.OnBar(12); }}).detach();
